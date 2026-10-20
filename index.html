@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>حاسبة المستثمر العقاري الذكية | Smart Real Estate Investor Suite</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- html2pdf.js for Direct High-Quality PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        navy: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #0b1120; color: #f8fafc; }
+        .glass-card {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-input {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .glass-input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            outline: none;
+        }
+        input[type=range] {
+            accent-color: #10b981;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* High-fidelity PDF print layout */
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .page-break { page-break-after: always; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="min-h-screen pb-24 text-slate-100 selection:bg-brand-500 selection:text-white">
+
+    <!-- Header & App Bar -->
+    <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 py-3">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                    <i class="fa-solid fa-building-wheat text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold text-white leading-tight flex items-center gap-1.5" id="app-title">
+                        حاسبة المستثمر العقاري الذكية
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30">PRO</span>
+                    </h1>
+                    <p class="text-xs text-slate-400" id="app-subtitle">العقارات الجاهزة وتحت الإنشاء مع وديعة الصيانة</p>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex items-center gap-2">
+                <!-- Currency Selector -->
+                <select id="currencySelector" onchange="updateCurrency(this.value)" class="text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 focus:border-brand-500 focus:outline-none">
+                    <option value="SAR">SAR (ر.س)</option>
+                    <option value="EGP" selected>EGP (ج.م)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="AED">AED (د.إ)</option>
+                    <option value="KWD">KWD (د.ك)</option>
+                    <option value="EUR">EUR (€)</option>
+                </select>
+
+                <!-- Language Toggle -->
+                <button onclick="toggleLanguage()" class="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1.5 rounded-lg transition-all text-brand-400 font-semibold">
+                    <i class="fa-solid fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
+
+                <!-- Export PDF Direct Button -->
+                <button onclick="generateDirectPDF()" class="text-xs bg-rose-600/90 hover:bg-rose-500 text-white font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all shadow-sm" title="تحميل تقرير PDF مباشر">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span class="hidden sm:inline" id="btn-pdf-text">PDF</span>
+                </button>
+
+                <!-- Export Excel Button -->
+                <button onclick="exportToExcel()" class="text-xs bg-emerald-600/90 hover:bg-emerald-500 text-white font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all shadow-sm" title="تصدير إلى Excel">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span class="hidden sm:inline" id="btn-excel-text">Excel</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-3 sm:px-4 pt-4 space-y-6">
+
+        <!-- Preset Investment Profiles -->
+        <section class="glass-card rounded-2xl p-3 border border-slate-800/80">
+            <div class="flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar pb-1">
+                <span class="text-xs font-semibold text-slate-400 whitespace-nowrap flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-gold-400"></i>
+                    <span id="txt-presets">نماذج جاهزة:</span>
+                </span>
+                <div class="flex items-center gap-2">
+                    <button onclick="loadScenario('offplan-luxury')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-brand-500/40 text-brand-300 whitespace-nowrap transition-all font-medium">
+                        🏢 تحت الإنشاء بالتقسيط + وديعة صيانة
+                    </button>
+                    <button onclick="loadScenario('ready-cash')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 whitespace-nowrap transition-all font-medium">
+                        🏠 شقة جاهزة كاش
+                    </button>
+                    <button onclick="loadScenario('ready-mortgage')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 whitespace-nowrap transition-all font-medium">
+                        🏦 تجاري بتمويل بنكي
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic Handover & Maintenance Deposit Alert Banner -->
+        <div id="maintenanceAlertBanner" class="rounded-2xl p-4 bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border border-amber-500/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="fa-solid fa-shield-halved text-base"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-amber-300" id="txt-banner-title">وديعة الصيانة ومرحلة الاستلام النهائي مفعلة</h4>
+                    <p class="text-xs text-slate-300 mt-0.5" id="txt-banner-desc">
+                        قيمة الوديعة المحسوبة: <span id="bannerMaintVal" class="font-bold text-white">0</span> تُسدد <span id="bannerMaintTiming" class="font-bold text-amber-400">مع الاستلام النهائي</span> وتضاف تلقائياً لرأس المال المستثمر وتخصم من تدفق سنة السداد.
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold" id="bannerHandoverYearBadge">سنة الاستلام: 3</span>
+            </div>
+        </div>
+
+        <!-- 8 Core Financial KPI Cards Grid -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- 1. Net Equity Invested -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-blue-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-equity-invested">صافي رأس المال المستثمر</span>
+                    <i class="fa-solid fa-vault text-blue-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-white" id="val-net-equity-invested">0</div>
+                <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1" id="sub-equity-invested">
+                    شامل المقدم والمصاريف والوديعة
+                </div>
+                <div class="text-[10px] text-blue-400 font-semibold mt-0.5" id="val-maint-in-equity">وديعة الصيانة: 0</div>
+            </div>
+
+            <!-- 2. Net Cash Flow -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-emerald-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-net-cashflow">صافي التدفق النقدي (سنة 1 تأجير)</span>
+                    <i class="fa-solid fa-money-bill-wave text-emerald-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-emerald-400" id="val-net-cashflow">0</div>
+                <div class="text-[11px] text-slate-400 mt-1 flex justify-between items-center">
+                    <span id="sub-lbl-monthly">شهرياً:</span>
+                    <span class="font-bold text-white" id="val-net-cashflow-mo">0</span>
+                </div>
+                <div class="text-[10px] text-slate-500 mt-0.5" id="val-cashflow-status-note">بعد الأقساط والمصاريف التشغيلية</div>
+            </div>
+
+            <!-- 3. Cash on Cash Return -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-purple-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-coc">عائد النقد (Cash on Cash)</span>
+                    <i class="fa-solid fa-percent text-purple-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-purple-400" id="val-coc-return">0.00%</div>
+                <div class="text-[11px] text-slate-400 mt-1 flex justify-between items-center">
+                    <span id="sub-lbl-coc5">في السنة 5:</span>
+                    <span class="font-bold text-purple-300" id="val-coc-year5">0.00%</span>
+                </div>
+                <div class="text-[10px] text-purple-400 font-semibold mt-0.5" id="val-coc-year10-note">في السنة 10: 0.00%</div>
+            </div>
+
+            <!-- 4. Principal Paydown / Equity Paid -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-amber-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-equity-paid">سداد أصل الدين (Equity Paid)</span>
+                    <i class="fa-solid fa-piggy-bank text-amber-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-amber-400" id="val-equity-paid">0</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="sub-equity-paid">
+                    أقساط المطور + الدفعات السنوية
+                </div>
+                <div class="text-[10px] text-amber-300 font-semibold mt-0.5" id="val-bullet-contribution">دفعات سنوية: 0</div>
+            </div>
+
+            <!-- 5. ROE (Return on Equity) -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-rose-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-roe">العائد على حقوق الملكية (ROE)</span>
+                    <i class="fa-solid fa-chart-line text-rose-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-rose-400" id="val-roe-return">0.00%</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="sub-roe-desc">
+                    كفاءة العائد الإجمالي على الملكية
+                </div>
+            </div>
+
+            <!-- 6. ROA (Return on Assets / Cap Rate) -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-cyan-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-roa">العائد على الأصول (ROA / Cap)</span>
+                    <i class="fa-solid fa-landmark text-cyan-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-cyan-400" id="val-roa-return">0.00%</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="sub-roa-desc">
+                    صافي الدخل التشغيلي ÷ قيمة الأصل
+                </div>
+            </div>
+
+            <!-- 7. Total ROI (Combined Return) -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-brand-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-total-roi">إجمالي العائد الشامل (Total ROI)</span>
+                    <i class="fa-solid fa-trophy text-brand-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-brand-400" id="val-total-roi">0.00%</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="sub-roi-desc">
+                    تدفق نقدي + سداد أصل + نمو سعر العقار
+                </div>
+            </div>
+
+            <!-- 8. Capital Payback Period -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-gold-500 relative overflow-hidden group">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="card-lbl-payback">فترة استرداد رأس المال</span>
+                    <i class="fa-solid fa-hourglass-half text-gold-400/70 text-sm"></i>
+                </div>
+                <div class="text-lg sm:text-xl font-black text-gold-400" id="val-payback-years">0 سنة</div>
+                <div class="text-[11px] text-slate-400 mt-1" id="sub-payback-desc">
+                    استرداد 100% من الكاش المستثمر
+                </div>
+            </div>
+        </section>
+
+        <!-- Break-Even Analysis & Safety Meter Section -->
+        <section class="glass-card rounded-3xl p-5 border border-slate-800">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-4 border-b border-slate-800/80 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white" id="title-breakeven">تحليل نقطة التعادل وإدارة المخاطر (Break-Even & Risk Analysis)</h3>
+                        <p class="text-xs text-slate-400" id="desc-breakeven">نسبة الإشغال وأدنى إيجار لتغطية التكاليف بدون خسائر نقدية</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700" id="status-safety-badge">
+                        درع الأمان: عالي جداً
+                    </span>
+                </div>
+            </div>
+
+            <!-- Safety Gauge Bar -->
+            <div class="space-y-2 mb-5">
+                <div class="flex justify-between text-xs font-medium">
+                    <span class="text-slate-400" id="lbl-gauge-ber">نسبة إشغال التعادل المطلوبة (BER): <strong class="text-rose-400" id="val-ber-ratio">0%</strong></span>
+                    <span class="text-slate-400" id="lbl-gauge-margin">هامش أمان الشغور: <strong class="text-emerald-400" id="val-safety-margin">0%</strong></span>
+                </div>
+                <div class="w-full h-3.5 bg-slate-800 rounded-full overflow-hidden flex p-0.5 border border-slate-700">
+                    <div id="bar-ber-segment" class="h-full bg-rose-500 rounded-l-full transition-all duration-500" style="width: 45%;"></div>
+                    <div id="bar-safety-segment" class="h-full bg-emerald-500 transition-all duration-500" style="width: 45%;"></div>
+                    <div id="bar-vacancy-segment" class="h-full bg-slate-600 rounded-r-full transition-all duration-500" style="width: 10%;"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-400 px-1">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> منطقة سداد الالتزامات (التعادل)</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> هامش الأمان والربح الصافي</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-600"></span> الشغور المتوقع</span>
+                </div>
+            </div>
+
+            <!-- Break-Even Metrics Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-800">
+                    <div class="text-[11px] text-slate-400" id="lbl-min-rent">أدنى إيجار للتعادل (شهرياً)</div>
+                    <div class="text-sm font-bold text-amber-400 mt-1" id="val-min-break-rent">0</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5" id="sub-min-rent">تغطية القسط والمصاريف دون ربح</div>
+                </div>
+                <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-800">
+                    <div class="text-[11px] text-slate-400" id="lbl-cushion-drop">تحمل انخفاض الإيجار</div>
+                    <div class="text-sm font-bold text-emerald-400 mt-1" id="val-rent-drop-cushion">0.0%</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5" id="sub-cushion-drop">قبل الدخول في تدفق نقدي سالب</div>
+                </div>
+                <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-800">
+                    <div class="text-[11px] text-slate-400" id="lbl-capital-recovered">معدل استرداد الكاش التراكمي (10 سنين)</div>
+                    <div class="text-sm font-bold text-purple-400 mt-1" id="val-capital-recovered-pct">0%</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5" id="sub-capital-recovered">نسبة ما استرد من رأس المال</div>
+                </div>
+                <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-800">
+                    <div class="text-[11px] text-slate-400" id="lbl-total-wealth-rec">مضاعفة رأس المال الإجمالي</div>
+                    <div class="text-sm font-bold text-blue-400 mt-1" id="val-wealth-multiple">0.0x</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5" id="sub-total-wealth">كاش + بناء ملكية + نمو سعر</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Inputs Accordion / Tabs -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Inputs Column (7 Cols on large screen) -->
+            <div class="lg:col-span-7 space-y-4">
+
+                <!-- 1. Property Acquisition & Maintenance Deposit Card -->
+                <div class="glass-card rounded-3xl p-5 border border-slate-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-house-chimney text-brand-400"></i>
+                            <span id="title-sec-acquisition">بيانات شراء العقار ووديعة الصيانة</span>
+                        </h3>
+                        <span class="text-xs text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-lg border border-brand-500/20" id="badge-acq">الأساسيات</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Property Price -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1 text-xs">
+                                <label class="text-slate-300 font-medium" id="lbl-prop-price">سعر شراء العقار الإجمالي</label>
+                                <span class="font-bold text-white text-sm" id="display-propPrice">3,000,000</span>
+                            </div>
+                            <input type="range" id="propPrice" min="300000" max="25000000" step="50000" value="3000000" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-xs text-slate-400" id="lbl-curr-sym">القيمة:</span>
+                                <input type="number" id="propPrice_num" value="3000000" oninput="syncSlider('propPrice', this.value)" class="glass-input text-xs font-semibold px-2 py-1 rounded-lg w-36 text-white">
+                            </div>
+                        </div>
+
+                        <!-- Down Payment % -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1 text-xs">
+                                <label class="text-slate-300 font-medium" id="lbl-down-payment">الدفعة الأولى المقدمة (Down Payment %)</label>
+                                <span class="font-bold text-emerald-400" id="display-downPaymentPct">10% (<span id="calc-down-val">300,000</span>)</span>
+                            </div>
+                            <input type="range" id="downPaymentPct" min="0" max="100" step="1" value="10" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Maintenance Deposit % (وديعة الصيانة) - CRITICAL REQUEST -->
+                        <div class="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-500/30 space-y-2">
+                            <div class="flex justify-between items-center text-xs">
+                                <label class="text-amber-300 font-bold flex items-center gap-1.5" id="lbl-maint-deposit">
+                                    <i class="fa-solid fa-wrench text-amber-400"></i>
+                                    نسبة وديعة الصيانة (تُدفع للمطور)
+                                </label>
+                                <span class="font-bold text-amber-300" id="display-maintDepositPct">8% (<span id="calc-maint-val">240,000</span>)</span>
+                            </div>
+                            <input type="range" id="maintDepositPct" min="0" max="20" step="0.5" value="8" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer accent-amber-500">
+                            
+                            <!-- Maintenance Payment Timing -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
+                                <div>
+                                    <label class="text-slate-400 block mb-1 text-[11px]" id="lbl-maint-timing">توقيت سداد وديعة الصيانة:</label>
+                                    <select id="maintPaymentTiming" onchange="calculateAll()" class="glass-input text-xs rounded-lg px-2 py-1.5 w-full text-slate-200">
+                                        <option value="at_handover" selected>مع الاستلام النهائي (At Handover)</option>
+                                        <option value="year_before">قبل الاستلام بسنة (1 Year Before Handover)</option>
+                                        <option value="split">مقسمة (50% قبل الاستلام و 50% معه)</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col justify-center text-[10px] text-amber-200/80 bg-slate-900/50 p-2 rounded-lg border border-amber-500/20">
+                                    <i class="fa-solid fa-circle-info mb-0.5 text-amber-400"></i>
+                                    <span id="desc-maint-timing">تُضاف الوديعة لصافي رأس المال وتُخصم من تدفق سنة السداد المحددة.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Closing Costs & Renovation -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex justify-between items-center mb-1 text-xs">
+                                    <label class="text-slate-300" id="lbl-closing-costs">مصاريف الشراء والتسجيل %</label>
+                                    <span class="font-bold text-slate-200" id="display-purchaseCostsPct">2.5%</span>
+                                </div>
+                                <input type="range" id="purchaseCostsPct" min="0" max="10" step="0.5" value="2.5" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1 text-xs">
+                                    <label class="text-slate-300" id="lbl-furnish-cost">تأثيث وتجهيز العقار</label>
+                                    <span class="font-bold text-slate-200" id="display-furnishCost">100,000</span>
+                                </div>
+                                <input type="range" id="furnishCost" min="0" max="1000000" step="10000" value="100000" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Financing, Developer Installments & Scheduled Bullets -->
+                <div class="glass-card rounded-3xl p-5 border border-slate-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-file-invoice-dollar text-gold-400"></i>
+                            <span id="title-sec-financing">نظام التقسيط والدفعات السنوية</span>
+                        </h3>
+                        <span class="text-xs text-gold-400 bg-gold-500/10 px-2 py-0.5 rounded-lg border border-gold-500/20" id="badge-finance">شروط السداد</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Financing Type Selection -->
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs font-semibold">
+                            <button id="btn-finance-dev" onclick="setFinancingType('developer')" class="py-2 rounded-lg bg-brand-600 text-white transition-all flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-handshake"></i>
+                                <span id="lbl-dev-installments">تقسيط مطور مباشر (0% فوائد)</span>
+                            </button>
+                            <button id="btn-finance-bank" onclick="setFinancingType('bank')" class="py-2 rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-building-columns"></i>
+                                <span id="lbl-bank-mortgage">تمويل بنكي برهن عقاري</span>
+                            </button>
+                        </div>
+
+                        <!-- Loan / Installment Tenure -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1 text-xs">
+                                <label class="text-slate-300 font-medium" id="lbl-tenure">مدة التقسيط / التمويل</label>
+                                <span class="font-bold text-white" id="display-loanTenure">7 سنوات</span>
+                            </div>
+                            <input type="range" id="loanTenure" min="1" max="25" step="1" value="7" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Bank Interest (Hidden if developer installments) -->
+                        <div id="bankInterestContainer" class="hidden">
+                            <div class="flex justify-between items-center mb-1 text-xs">
+                                <label class="text-slate-300 font-medium" id="lbl-interest">معدل الفائدة البنكية السنوية %</label>
+                                <span class="font-bold text-rose-400" id="display-interestRate">6.5%</span>
+                            </div>
+                            <input type="range" id="interestRate" min="1" max="20" step="0.25" value="6.5" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Scheduled Annual Bullet Payments (دفعات سنوية بخلاف الأقساط) -->
+                        <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-700/60 space-y-3">
+                            <div class="flex justify-between items-center text-xs">
+                                <label class="text-gold-400 font-bold flex items-center gap-1.5" id="lbl-annual-bullet">
+                                    <i class="fa-solid fa-calendar-check"></i>
+                                    دفعات سنوية بخلاف الأقساط (Annual Bullets)
+                                </label>
+                                <span class="font-bold text-gold-300" id="display-annualBullet">80,000 / سنوياً</span>
+                            </div>
+                            <input type="range" id="annualBullet" min="0" max="500000" step="10000" value="80000" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer accent-gold-500">
+                            
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-slate-400 text-[11px]" id="lbl-bullet-years">عدد سنوات الدفعات السنوية:</span>
+                                        <span class="font-bold text-white text-[11px]" id="display-annualBulletYears">4 سنوات</span>
+                                    </div>
+                                    <input type="range" id="annualBulletYears" min="1" max="10" step="1" value="4" oninput="syncInput(this.id, this.value)" class="w-full h-1 bg-slate-700 rounded-lg cursor-pointer">
+                                </div>
+                                <div class="text-[10px] text-slate-400 bg-slate-800/80 p-2 rounded-lg flex items-center">
+                                    <span id="desc-bullet-note">تخصم من التدفق السنوي وتخفض رصيد المطور مباشرة 100%.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Rental Operation, Off-Plan Timeline & Rent Escalation -->
+                <div class="glass-card rounded-3xl p-5 border border-slate-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-key text-emerald-400"></i>
+                            <span id="title-sec-rental">التشغيل، الإيجار والزيادة السنوية</span>
+                        </h3>
+                        <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20" id="badge-rent">التدفقات</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Property Status: Off-Plan vs Ready -->
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs font-semibold">
+                            <button id="btn-status-offplan" onclick="setPropertyStatus('offplan')" class="py-2 rounded-lg bg-emerald-600 text-white transition-all flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-person-digging"></i>
+                                <span id="lbl-status-offplan">تحت الإنشاء (Off-Plan)</span>
+                            </button>
+                            <button id="btn-status-ready" onclick="setPropertyStatus('ready')" class="py-2 rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span id="lbl-status-ready">عقار جاهز (Ready)</span>
+                            </button>
+                        </div>
+
+                        <!-- Handover Years Slider -->
+                        <div id="handoverYearsContainer">
+                            <div class="flex justify-between items-center mb-1 text-xs">
+                                <label class="text-slate-300 font-medium" id="lbl-handover-years">مدة الإنشاء وسنة الاستلام وبدء الإيجار</label>
+                                <span class="font-bold text-emerald-400" id="display-handoverYears">بعد 3 سنوات (سنة 3)</span>
+                            </div>
+                            <input type="range" id="handoverYears" min="1" max="6" step="1" value="3" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            <p class="text-[10px] text-slate-400 mt-1" id="desc-handover-note">فترة الإنشاء: لا يوجد إيجار، سداد أقساط فقط، وتسدد وديعة الصيانة حسب التوقيت المختار.</p>
+                        </div>
+
+                        <!-- Base Monthly Rent -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1 text-xs">
+                                <label class="text-slate-300 font-medium" id="lbl-monthly-rent">الإيجار الشهري المتوقع (عند أول سنة استلام)</label>
+                                <span class="font-bold text-white text-sm" id="display-monthlyRent">24,000</span>
+                            </div>
+                            <input type="range" id="monthlyRent" min="2000" max="250000" step="500" value="24000" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-xs text-slate-400" id="lbl-rent-curr">القيمة:</span>
+                                <input type="number" id="monthlyRent_num" value="24000" oninput="syncSlider('monthlyRent', this.value)" class="glass-input text-xs font-semibold px-2 py-1 rounded-lg w-32 text-white">
+                            </div>
+                        </div>
+
+                        <!-- Annual Rent Escalation % -->
+                        <div class="p-3 rounded-2xl bg-brand-950/30 border border-brand-500/30 space-y-1">
+                            <div class="flex justify-between items-center text-xs">
+                                <label class="text-brand-300 font-bold flex items-center gap-1.5" id="lbl-rent-escalation">
+                                    <i class="fa-solid fa-arrow-trend-up text-brand-400"></i>
+                                    نسبة الزيادة السنوية في الإيجار (Escalation %)
+                                </label>
+                                <span class="font-bold text-brand-300" id="display-annualRentEscalation">5.0% سنوياً</span>
+                            </div>
+                            <input type="range" id="annualRentEscalation" min="0" max="15" step="0.5" value="5.0" oninput="syncInput(this.id, this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                            <p class="text-[10px] text-slate-400" id="desc-escalation-note">زيادة مركبة تبدأ بعد الاستلام لتعظيم عائد النقد (CoC) والتغلب على التضخم.</p>
+                        </div>
+
+                        <!-- Vacancy & OpEx & Appreciation -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <div class="flex justify-between items-center mb-1 text-[11px]">
+                                    <span class="text-slate-300" id="lbl-vacancy">الشغور %</span>
+                                    <span class="font-bold text-slate-200" id="display-vacancyRate">8%</span>
+                                </div>
+                                <input type="range" id="vacancyRate" min="0" max="30" step="1" value="8" oninput="syncInput(this.id, this.value)" class="w-full h-1 bg-slate-700 rounded-lg cursor-pointer">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1 text-[11px]">
+                                    <span class="text-slate-300" id="lbl-opex">مصاريف التشغيل %</span>
+                                    <span class="font-bold text-slate-200" id="display-opexRate">10%</span>
+                                </div>
+                                <input type="range" id="opexRate" min="0" max="30" step="1" value="10" oninput="syncInput(this.id, this.value)" class="w-full h-1 bg-slate-700 rounded-lg cursor-pointer">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1 text-[11px]">
+                                    <span class="text-slate-300" id="lbl-appreciation">نمو العقار السنوي %</span>
+                                    <span class="font-bold text-slate-200" id="display-capitalAppreciation">6%</span>
+                                </div>
+                                <input type="range" id="capitalAppreciation" min="0" max="20" step="0.5" value="6" oninput="syncInput(this.id, this.value)" class="w-full h-1 bg-slate-700 rounded-lg cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizations & Charts Column (5 Cols) -->
+            <div class="lg:col-span-5 space-y-4">
+
+                <!-- Cash on Cash Evolution Mini Card -->
+                <div class="glass-card rounded-3xl p-5 border border-slate-800">
+                    <h3 class="text-sm font-bold text-white mb-3 flex items-center justify-between">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-purple-400"></i>
+                            <span id="title-coc-evolution">تسارع عائد النقد (CoC Evolution)</span>
+                        </span>
+                        <span class="text-[10px] text-purple-400 font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20">تأثير تصاعد الإيجار</span>
+                    </h3>
+
+                    <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                            <div class="text-[10px] text-slate-400" id="lbl-coc-year1">سنة الاستلام</div>
+                            <div class="text-sm font-black text-purple-300 mt-1" id="disp-coc-y1">0.0%</div>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-slate-900 border border-purple-500/30">
+                            <div class="text-[10px] text-purple-300" id="lbl-coc-year5">السنة 5</div>
+                            <div class="text-sm font-black text-purple-400 mt-1" id="disp-coc-y5">0.0%</div>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-slate-900 border border-emerald-500/30">
+                            <div class="text-[10px] text-emerald-300" id="lbl-coc-year10">السنة 10</div>
+                            <div class="text-sm font-black text-emerald-400 mt-1" id="disp-coc-y10">0.0%</div>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed" id="desc-coc-dynamic-note">
+                        يقفز عائد النقد بشكل مضاعف مع ثبات أو انتهاء قسط المطور واستمرار تصاعد الإيجار السنوي.
+                    </p>
+                </div>
+
+                <!-- Chart 1: Cash Flow & Rent Growth -->
+                <div class="glass-card rounded-3xl p-5 border border-slate-800">
+                    <h3 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-brand-400"></i>
+                        <span id="title-chart-cashflow">مسار الإيجار، الالتزامات وصافي التدفق</span>
+                    </h3>
+                    <div class="h-56 relative">
+                        <canvas id="cashflowChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Net Equity & Wealth Accumulation -->
+                <div class="glass-card rounded-3xl p-5 border border-slate-800">
+                    <h3 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-blue-400"></i>
+                        <span id="title-chart-wealth">تراكم حقوق الملكية الصافية مقابل الدين</span>
+                    </h3>
+                    <div class="h-56 relative">
+                        <canvas id="wealthChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Stress Testing Sensitivity -->
+                <div class="glass-card rounded-3xl p-5 border border-slate-800">
+                    <h3 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+                        <span id="title-stress-test">اختبارات الضغط وحساسية السوق</span>
+                    </h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-900">
+                            <span class="text-slate-300" id="stress-lbl-rent-drop">هبوط الإيجار 15%</span>
+                            <span class="font-bold" id="stress-val-rent-drop">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-900">
+                            <span class="text-slate-300" id="stress-lbl-vacancy-shock">شغور حاد 20%</span>
+                            <span class="font-bold" id="stress-val-vacancy-shock">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 rounded-xl bg-slate-900">
+                            <span class="text-slate-300" id="stress-lbl-opex-surge">ارتفاع المصاريف 25%</span>
+                            <span class="font-bold" id="stress-val-opex-surge">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10-Year Comprehensive Schedule Table -->
+        <section class="glass-card rounded-3xl p-5 border border-slate-800 overflow-hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-table-list text-brand-400"></i>
+                        <span id="title-table-schedule">جدول محاكاة التدفقات والثروة لـ 10 سنوات</span>
+                    </h3>
+                    <p class="text-xs text-slate-400" id="desc-table-schedule">يوضح مرحلة الإنشاء، سداد وديعة الصيانة، الأقساط، الدفعات السنوية، وتطور العوائد</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="exportToExcel()" class="text-xs px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span id="btn-export-excel-table">تصدير الجدول إلى Excel</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Responsive Wrapper -->
+            <div class="overflow-x-auto -mx-5 px-5">
+                <table class="w-full text-right text-xs whitespace-nowrap" id="scheduleTable">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 bg-slate-900/60">
+                            <th class="py-2.5 px-3 font-semibold" id="th-year">السنة</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-status">الحالة</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-rent">الإيجار السنوي</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-installment">القسط السنوي</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-bullet">دفعة سنوية</th>
+                            <th class="py-2.5 px-3 font-semibold text-amber-400" id="th-maint">وديعة صيانة</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-opex">مصاريف التشغيل</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-ncf">صافي الكاش (NCF)</th>
+                            <th class="py-2.5 px-3 font-semibold text-emerald-400" id="th-cum-cf">الكاش التراكمي</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-debt">رصيد الدين</th>
+                            <th class="py-2.5 px-3 font-semibold text-blue-400" id="th-equity">صافي الملكية</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-coc">CoC %</th>
+                            <th class="py-2.5 px-3 font-semibold" id="th-roe">ROE %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody" class="divide-y divide-slate-800/60 font-medium">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Hidden Element Specially Formatted for High-Precision PDF Generation -->
+    <div id="pdf-report-template" class="print-only p-8 text-black bg-white" style="font-family: 'Cairo', sans-serif; direction: rtl;">
+        <!-- Filled dynamically before PDF generation -->
+    </div>
+
+    <!-- Embedded Application Logic -->
+    <script>
+        // State Management
+        let currentLang = 'ar';
+        let currentCurrency = 'EGP';
+        let propertyStatus = 'offplan'; // 'offplan' | 'ready'
+        let financingType = 'developer'; // 'developer' | 'bank'
+
+        // Charts references
+        let cashflowChartInstance = null;
+        let wealthChartInstance = null;
+
+        // Translation Dictionary
+        const i18n = {
+            ar: {
+                appTitle: "حاسبة المستثمر العقاري الذكية",
+                appSubtitle: "العقارات الجاهزة وتحت الإنشاء مع وديعة الصيانة",
+                langBtnText: "EN",
+                btnPdfText: "PDF",
+                btnExcelText: "Excel",
+                txtPresets: "نماذج جاهزة:",
+                txtBannerTitle: "وديعة الصيانة ومرحلة الاستلام النهائي مفعلة",
+                cardEquityInvested: "صافي رأس المال المستثمر",
+                subEquityInvested: "شامل المقدم والمصاريف والتأثيث والوديعة",
+                cardNetCashflow: "صافي التدفق النقدي (أول سنة تأجير)",
+                subMonthly: "شهرياً:",
+                cardCoc: "عائد النقد (Cash on Cash)",
+                subCoc5: "في السنة 5:",
+                cardEquityPaid: "سداد أصل الدين (Equity Paid)",
+                subEquityPaid: "أقساط المطور + الدفعات السنوية",
+                cardRoe: "العائد على حقوق الملكية (ROE)",
+                subRoeDesc: "كفاءة العائد الإجمالي على الملكية",
+                cardRoa: "العائد على الأصول (ROA / Cap)",
+                subRoaDesc: "صافي الدخل التشغيلي ÷ قيمة الأصل",
+                cardTotalRoi: "إجمالي العائد الشامل (Total ROI)",
+                subRoiDesc: "تدفق نقدي + سداد أصل + نمو سعر العقار",
+                cardPayback: "فترة استرداد رأس المال",
+                subPaybackDesc: "استرداد 100% من الكاش المستثمر",
+                titleBreakeven: "تحليل نقطة التعادل وإدارة المخاطر (Break-Even & Risk Analysis)",
+                descBreakeven: "نسبة الإشغال وأدنى إيجار لتغطية التكاليف بدون خسائر نقدية",
+                lblGaugeBer: "نسبة إشغال التعادل المطلوبة (BER):",
+                lblGaugeMargin: "هامش أمان الشغور:",
+                lblMinRent: "أدنى إيجار للتعادل (شهرياً)",
+                subMinRent: "تغطية القسط والمصاريف دون ربح",
+                lblCushionDrop: "تحمل انخفاض الإيجار",
+                subCushionDrop: "قبل الدخول في تدفق نقدي سالب",
+                lblCapitalRecovered: "معدل استرداد الكاش التراكمي (10 سنين)",
+                subCapitalRecovered: "نسبة ما استرد من رأس المال",
+                lblTotalWealthRec: "مضاعفة رأس المال الإجمالي",
+                subTotalWealth: "كاش + بناء ملكية + نمو سعر",
+                titleSecAcquisition: "بيانات شراء العقار ووديعة الصيانة",
+                lblPropPrice: "سعر شراء العقار الإجمالي",
+                lblDownPayment: "الدفعة الأولى المقدمة (Down Payment %)",
+                lblMaintDeposit: "نسبة وديعة الصيانة (تُدفع للمطور)",
+                lblMaintTiming: "توقيت سداد وديعة الصيانة:",
+                descMaintTiming: "تُضاف الوديعة لصافي رأس المال وتُخصم من تدفق سنة السداد المحددة.",
+                lblClosingCosts: "مصاريف الشراء والتسجيل %",
+                lblFurnishCost: "تأثيث وتجهيز العقار",
+                titleSecFinancing: "نظام التقسيط والدفعات السنوية",
+                lblDevInstallments: "تقسيط مطور مباشر (0% فوائد)",
+                lblBankMortgage: "تمويل بنكي برهن عقاري",
+                lblTenure: "مدة التقسيط / التمويل",
+                lblInterest: "معدل الفائدة البنكية السنوية %",
+                lblAnnualBullet: "دفعات سنوية بخلاف الأقساط (Annual Bullets)",
+                lblBulletYears: "عدد سنوات الدفعات السنوية:",
+                descBulletNote: "تخصم من التدفق السنوي وتخفض رصيد المطور مباشرة 100%.",
+                titleSecRental: "التشغيل، الإيجار والزيادة السنوية",
+                lblStatusOffplan: "تحت الإنشاء (Off-Plan)",
+                lblStatusReady: "عقار جاهز (Ready)",
+                lblHandoverYears: "مدة الإنشاء وسنة الاستلام وبدء الإيجار",
+                descHandoverNote: "فترة الإنشاء: لا يوجد إيجار، سداد أقساط فقط، وتسدد وديعة الصيانة حسب التوقيت المختار.",
+                lblMonthlyRent: "الإيجار الشهري المتوقع (عند أول سنة استلام)",
+                lblRentEscalation: "نسبة الزيادة السنوية في الإيجار (Escalation %)",
+                descEscalationNote: "زيادة مركبة تبدأ بعد الاستلام لتعظيم عائد النقد (CoC) والتغلب على التضخم.",
+                lblVacancy: "الشغور %",
+                lblOpex: "مصاريف التشغيل %",
+                lblAppreciation: "نمو العقار السنوي %",
+                titleCocEvolution: "تسارع عائد النقد (CoC Evolution)",
+                lblCocYear1: "سنة الاستلام",
+                lblCocYear5: "السنة 5",
+                lblCocYear10: "السنة 10",
+                descCocDynamicNote: "يقفز عائد النقد بشكل مضاعف مع ثبات أو انتهاء قسط المطور واستمرار تصاعد الإيجار السنوي.",
+                titleChartCashflow: "مسار الإيجار، الالتزامات وصافي التدفق",
+                titleChartWealth: "تراكم حقوق الملكية الصافية مقابل الدين",
+                titleStressTest: "اختبارات الضغط وحساسية السوق",
+                stressRentDrop: "هبوط الإيجار 15%",
+                stressVacancyShock: "شغور حاد 20%",
+                stressOpexSurge: "ارتفاع المصاريف 25%",
+                titleTableSchedule: "جدول محاكاة التدفقات والثروة لـ 10 سنوات",
+                descTableSchedule: "يوضح مرحلة الإنشاء، سداد وديعة الصيانة، الأقساط، الدفعات السنوية، وتطور العوائد",
+                btnExportExcelTable: "تصدير الجدول إلى Excel",
+                thYear: "السنة",
+                thStatus: "الحالة",
+                thRent: "الإيجار السنوي",
+                thInstallment: "القسط السنوي",
+                thBullet: "دفعة سنوية",
+                thMaint: "وديعة صيانة",
+                thOpex: "مصاريف التشغيل",
+                thNcf: "صافي الكاش (NCF)",
+                thCumCf: "الكاش التراكمي",
+                thDebt: "رصيد الدين",
+                thEquity: "صافي الملكية",
+                thCoc: "CoC %",
+                thRoe: "ROE %",
+                optAtHandover: "مع الاستلام النهائي (At Handover)",
+                optYearBefore: "قبل الاستلام بسنة (1 Year Before Handover)",
+                optSplit: "مقسمة (50% قبل الاستلام و 50% معه)",
+                statusUnderConst: "تحت الإنشاء",
+                statusRented: "مؤجر ومستلم",
+                statusDebtFree: "مؤجر (بدون دين)"
+            },
+            en: {
+                appTitle: "Smart Real Estate Investor Suite",
+                appSubtitle: "Ready & Off-Plan Properties with Handover Maintenance Deposit",
+                langBtnText: "عربي",
+                btnPdfText: "PDF",
+                btnExcelText: "Excel",
+                txtPresets: "Presets:",
+                txtBannerTitle: "Maintenance Deposit & Handover Phase Active",
+                cardEquityInvested: "Net Equity Invested",
+                subEquityInvested: "Incl. Down Payment, Costs, Furnishing & Deposit",
+                cardNetCashflow: "Net Cash Flow (Year 1 Rented)",
+                subMonthly: "Monthly:",
+                cardCoc: "Cash on Cash Return (CoC)",
+                subCoc5: "In Year 5:",
+                cardEquityPaid: "Equity Paid (Principal Paydown)",
+                subEquityPaid: "Dev Installments + Annual Bullets",
+                cardRoe: "Return on Equity (ROE)",
+                subRoeDesc: "Combined Return Efficiency on Equity",
+                cardRoa: "Return on Assets (ROA / Cap)",
+                subRoaDesc: "Net Operating Income ÷ Property Value",
+                cardTotalRoi: "Total ROI (Combined Return)",
+                subRoiDesc: "Cash Flow + Paydown + Property Growth",
+                cardPayback: "Capital Payback Period",
+                subPaybackDesc: "Recover 100% of Invested Cash",
+                titleBreakeven: "Break-Even & Risk Analysis",
+                descBreakeven: "Break-Even Occupancy and Floor Rent to avoid cash losses",
+                lblGaugeBer: "Break-Even Occupancy Ratio (BER):",
+                lblGaugeMargin: "Vacancy Safety Buffer:",
+                lblMinRent: "Floor Break-Even Rent (Monthly)",
+                subMinRent: "Covers debt & OpEx with zero loss",
+                lblCushionDrop: "Rent Drop Tolerance",
+                subCushionDrop: "Before entering negative cash flow",
+                lblCapitalRecovered: "10-Year Cumulative Cash Recovery",
+                subCapitalRecovered: "% of Equity recovered via cash flow",
+                lblTotalWealthRec: "Total Wealth Multiplier",
+                subTotalWealth: "Cash + Equity built + Property gain",
+                titleSecAcquisition: "Acquisition & Maintenance Deposit",
+                lblPropPrice: "Total Property Purchase Price",
+                lblDownPayment: "Down Payment %",
+                lblMaintDeposit: "Maintenance Deposit % (To Developer)",
+                lblMaintTiming: "Maintenance Deposit Timing:",
+                descMaintTiming: "Added to Net Equity and deducted from the cash flow in designated year.",
+                lblClosingCosts: "Purchase & Closing Costs %",
+                lblFurnishCost: "Furnishing & Renovation Budget",
+                titleSecFinancing: "Financing & Scheduled Bullets",
+                lblDevInstallments: "0% Developer Direct Installments",
+                lblBankMortgage: "Bank Mortgage Loan",
+                lblTenure: "Installment / Loan Tenure",
+                lblInterest: "Annual Mortgage Interest %",
+                lblAnnualBullet: "Scheduled Annual Bullet Payments",
+                lblBulletYears: "Annual Bullets Duration:",
+                descBulletNote: "Deducted from yearly cash flow and reduces developer balance 100%.",
+                titleSecRental: "Rental Operations & Rent Escalation",
+                lblStatusOffplan: "Off-Plan (Under Construction)",
+                lblStatusReady: "Ready Property",
+                lblHandoverYears: "Construction Timeline & Handover Year",
+                descHandoverNote: "Construction phase: No rent, pure installments, maintenance deposit paid as scheduled.",
+                lblMonthlyRent: "Expected Monthly Rent (At Handover Year)",
+                lblRentEscalation: "Annual Rent Escalation %",
+                descEscalationNote: "Compounding annual increase post-handover to boost CoC and beat inflation.",
+                lblVacancy: "Vacancy %",
+                lblOpex: "Operating Expenses %",
+                lblAppreciation: "Annual Property Appreciation %",
+                titleCocEvolution: "Cash on Cash (CoC) Evolution",
+                lblCocYear1: "Handover Year",
+                lblCocYear5: "Year 5",
+                lblCocYear10: "Year 10",
+                descCocDynamicNote: "Cash-on-cash accelerates dramatically as developer debt is retired while rent escalates.",
+                titleChartCashflow: "Rent, Debt Service & Net Cash Flow Trajectory",
+                titleChartWealth: "Net Equity Accumulation vs Remaining Debt",
+                titleStressTest: "Market Sensitivity & Stress Testing",
+                stressRentDrop: "15% Rent Drop",
+                stressVacancyShock: "20% Severe Vacancy Shock",
+                stressOpexSurge: "25% OpEx Surge",
+                titleTableSchedule: "10-Year Financial & Wealth Schedule",
+                descTableSchedule: "Displays construction phase, maintenance deposit payment, bullets, and evolving returns",
+                btnExportExcelTable: "Export Table to Excel",
+                thYear: "Year",
+                thStatus: "Status",
+                thRent: "Annual Rent",
+                thInstallment: "Annual Installment",
+                thBullet: "Annual Bullet",
+                thMaint: "Maint Deposit",
+                thOpex: "Operating Expenses",
+                thNcf: "Net Cash Flow",
+                thCumCf: "Cumulative Cash",
+                thDebt: "Remaining Debt",
+                thEquity: "Net Equity",
+                thCoc: "CoC %",
+                thRoe: "ROE %",
+                optAtHandover: "At Handover",
+                optYearBefore: "1 Year Before Handover",
+                optSplit: "Split (50% Year Before & 50% At Handover)",
+                statusUnderConst: "Under Construction",
+                statusRented: "Handed Over & Rented",
+                statusDebtFree: "Rented (Debt Free)"
+            }
+        };
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            
+            // Adjust body text alignment classes
+            const table = document.getElementById('scheduleTable');
+            if (currentLang === 'en') {
+                table.classList.remove('text-right');
+                table.classList.add('text-left');
+            } else {
+                table.classList.remove('text-left');
+                table.classList.add('text-right');
+            }
+
+            applyTranslations();
+            calculateAll();
+        }
+
+        function applyTranslations() {
+            const t = i18n[currentLang];
+            document.getElementById('app-title').innerHTML = `${t.appTitle} <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30">PRO</span>`;
+            document.getElementById('app-subtitle').innerText = t.appSubtitle;
+            document.getElementById('langBtnText').innerText = t.langBtnText;
+            document.getElementById('btn-pdf-text').innerText = t.btnPdfText;
+            document.getElementById('btn-excel-text').innerText = t.btnExcelText;
+            document.getElementById('txt-presets').innerText = t.txtPresets;
+            document.getElementById('txt-banner-title').innerText = t.txtBannerTitle;
+
+            // Cards
+            document.getElementById('card-lbl-equity-invested').innerText = t.cardEquityInvested;
+            document.getElementById('sub-equity-invested').innerText = t.subEquityInvested;
+            document.getElementById('card-lbl-net-cashflow').innerText = t.cardNetCashflow;
+            document.getElementById('sub-lbl-monthly').innerText = t.subMonthly;
+            document.getElementById('card-lbl-coc').innerText = t.cardCoc;
+            document.getElementById('sub-lbl-coc5').innerText = t.subCoc5;
+            document.getElementById('card-lbl-equity-paid').innerText = t.cardEquityPaid;
+            document.getElementById('sub-equity-paid').innerText = t.subEquityPaid;
+            document.getElementById('card-lbl-roe').innerText = t.cardRoe;
+            document.getElementById('sub-roe-desc').innerText = t.subRoeDesc;
+            document.getElementById('card-lbl-roa').innerText = t.cardRoa;
+            document.getElementById('sub-roa-desc').innerText = t.subRoaDesc;
+            document.getElementById('card-lbl-total-roi').innerText = t.cardTotalRoi;
+            document.getElementById('sub-roi-desc').innerText = t.subRoiDesc;
+            document.getElementById('card-lbl-payback').innerText = t.cardPayback;
+            document.getElementById('sub-payback-desc').innerText = t.subPaybackDesc;
+
+            // Break Even
+            document.getElementById('title-breakeven').innerText = t.titleBreakeven;
+            document.getElementById('desc-breakeven').innerText = t.descBreakeven;
+            document.getElementById('lbl-gauge-ber').innerHTML = `${t.lblGaugeBer} <strong class="text-rose-400" id="val-ber-ratio">0%</strong>`;
+            document.getElementById('lbl-gauge-margin').innerHTML = `${t.lblGaugeMargin} <strong class="text-emerald-400" id="val-safety-margin">0%</strong>`;
+            document.getElementById('lbl-min-rent').innerText = t.lblMinRent;
+            document.getElementById('sub-min-rent').innerText = t.subMinRent;
+            document.getElementById('lbl-cushion-drop').innerText = t.lblCushionDrop;
+            document.getElementById('sub-cushion-drop').innerText = t.subCushionDrop;
+            document.getElementById('lbl-capital-recovered').innerText = t.lblCapitalRecovered;
+            document.getElementById('sub-capital-recovered').innerText = t.subCapitalRecovered;
+            document.getElementById('lbl-total-wealth-rec').innerText = t.lblTotalWealthRec;
+            document.getElementById('sub-total-wealth').innerText = t.subTotalWealth;
+
+            // Section 1
+            document.getElementById('title-sec-acquisition').innerText = t.titleSecAcquisition;
+            document.getElementById('lbl-propPrice').innerText = t.lblPropPrice;
+            document.getElementById('lbl-down-payment').innerText = t.lblDownPayment;
+            document.getElementById('lbl-maint-deposit').innerHTML = `<i class="fa-solid fa-wrench text-amber-400"></i> ${t.lblMaintDeposit}`;
+            document.getElementById('lbl-maint-timing').innerText = t.lblMaintTiming;
+            document.getElementById('desc-maint-timing').innerText = t.descMaintTiming;
+            document.getElementById('lbl-closing-costs').innerText = t.lblClosingCosts;
+            document.getElementById('lbl-furnish-cost').innerText = t.lblFurnishCost;
+
+            // Update timing select options
+            const selTiming = document.getElementById('maintPaymentTiming');
+            selTiming.options[0].text = t.optAtHandover;
+            selTiming.options[1].text = t.optYearBefore;
+            selTiming.options[2].text = t.optSplit;
+
+            // Section 2
+            document.getElementById('title-sec-financing').innerText = t.titleSecFinancing;
+            document.getElementById('lbl-dev-installments').innerText = t.lblDevInstallments;
+            document.getElementById('lbl-bank-mortgage').innerText = t.lblBankMortgage;
+            document.getElementById('lbl-tenure').innerText = t.lblTenure;
+            document.getElementById('lbl-interest').innerText = t.lblInterest;
+            document.getElementById('lbl-annual-bullet').innerHTML = `<i class="fa-solid fa-calendar-check"></i> ${t.lblAnnualBullet}`;
+            document.getElementById('lbl-bullet-years').innerText = t.lblBulletYears;
+            document.getElementById('desc-bullet-note').innerText = t.descBulletNote;
+
+            // Section 3
+            document.getElementById('title-sec-rental').innerText = t.titleSecRental;
+            document.getElementById('lbl-status-offplan').innerText = t.lblStatusOffplan;
+            document.getElementById('lbl-status-ready').innerText = t.lblStatusReady;
+            document.getElementById('lbl-handover-years').innerText = t.lblHandoverYears;
+            document.getElementById('desc-handover-note').innerText = t.descHandoverNote;
+            document.getElementById('lbl-monthly-rent').innerText = t.lblMonthlyRent;
+            document.getElementById('lbl-rent-escalation').innerHTML = `<i class="fa-solid fa-arrow-trend-up text-brand-400"></i> ${t.lblRentEscalation}`;
+            document.getElementById('desc-escalation-note').innerText = t.descEscalationNote;
+            document.getElementById('lbl-vacancy').innerText = t.lblVacancy;
+            document.getElementById('lbl-opex').innerText = t.lblOpex;
+            document.getElementById('lbl-appreciation').innerText = t.lblAppreciation;
+
+            // CoC Card & Charts & Stress
+            document.getElementById('title-coc-evolution').innerText = t.titleCocEvolution;
+            document.getElementById('lbl-coc-year1').innerText = t.lblCocYear1;
+            document.getElementById('lbl-coc-year5').innerText = t.lblCocYear5;
+            document.getElementById('lbl-coc-year10').innerText = t.lblCocYear10;
+            document.getElementById('desc-coc-dynamic-note').innerText = t.descCocDynamicNote;
+            document.getElementById('title-chart-cashflow').innerText = t.titleChartCashflow;
+            document.getElementById('title-chart-wealth').innerText = t.titleChartWealth;
+            document.getElementById('title-stress-test').innerText = t.titleStressTest;
+            document.getElementById('stress-lbl-rent-drop').innerText = t.stressRentDrop;
+            document.getElementById('stress-lbl-vacancy-shock').innerText = t.stressVacancyShock;
+            document.getElementById('stress-lbl-opex-surge').innerText = t.stressOpexSurge;
+
+            // Table headers
+            document.getElementById('title-table-schedule').innerText = t.titleTableSchedule;
+            document.getElementById('desc-table-schedule').innerText = t.descTableSchedule;
+            document.getElementById('btn-export-excel-table').innerText = t.btnExportExcelTable;
+            document.getElementById('th-year').innerText = t.thYear;
+            document.getElementById('th-status').innerText = t.thStatus;
+            document.getElementById('th-rent').innerText = t.thRent;
+            document.getElementById('th-installment').innerText = t.thInstallment;
+            document.getElementById('th-bullet').innerText = t.thBullet;
+            document.getElementById('th-maint').innerText = t.thMaint;
+            document.getElementById('th-opex').innerText = t.thOpex;
+            document.getElementById('th-ncf').innerText = t.thNcf;
+            document.getElementById('th-cum-cf').innerText = t.thCumCf;
+            document.getElementById('th-debt').innerText = t.thDebt;
+            document.getElementById('th-equity').innerText = t.thEquity;
+            document.getElementById('th-coc').innerText = t.thCoc;
+            document.getElementById('th-roe').innerText = t.thRoe;
+        }
+
+        function updateCurrency(curr) {
+            currentCurrency = curr;
+            calculateAll();
+        }
+
+        function formatMoney(amount) {
+            const num = Math.round(amount);
+            const formatted = new Intl.NumberFormat(currentLang === 'ar' ? 'ar-EG' : 'en-US').format(num);
+            return `${formatted} ${currentCurrency}`;
+        }
+
+        function syncInput(id, val) {
+            const numEl = document.getElementById(id + '_num');
+            if (numEl) numEl.value = val;
+            calculateAll();
+        }
+
+        function syncSlider(sliderId, val) {
+            const slider = document.getElementById(sliderId);
+            if (slider) slider.value = val;
+            calculateAll();
+        }
+
+        function setFinancingType(type) {
+            financingType = type;
+            const btnDev = document.getElementById('btn-finance-dev');
+            const btnBank = document.getElementById('btn-finance-bank');
+            const bankContainer = document.getElementById('bankInterestContainer');
+
+            if (type === 'developer') {
+                btnDev.className = "py-2 rounded-lg bg-brand-600 text-white transition-all flex items-center justify-center gap-1.5";
+                btnBank.className = "py-2 rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5";
+                bankContainer.classList.add('hidden');
+            } else {
+                btnBank.className = "py-2 rounded-lg bg-brand-600 text-white transition-all flex items-center justify-center gap-1.5";
+                btnDev.className = "py-2 rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5";
+                bankContainer.classList.remove('hidden');
+            }
+            calculateAll();
+        }
+
+        function setPropertyStatus(status) {
+            propertyStatus = status;
+            const btnOffplan = document.getElementById('btn-status-offplan');
+            const btnReady = document.getElementById('btn-status-ready');
+            const handoverContainer = document.getElementById('handoverYearsContainer');
+
+            if (status === 'offplan') {
+                btnOffplan.className = "py-2 rounded-lg bg-emerald-600 text-white transition-all flex items-center justify-center gap-1.5";
+                btnReady.className = "py-2 rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5";
+                handoverContainer.classList.remove('hidden');
+            } else {
+                btnReady.className = "py-2 rounded-lg bg-emerald-600 text-white transition-all flex items-center justify-center gap-1.5";
+                btnOffplan.className = "py-2 rounded-lg text-slate-400 hover:text-white transition-all flex items-center justify-center gap-1.5";
+                handoverContainer.classList.add('hidden');
+            }
+            calculateAll();
+        }
+
+        function loadScenario(scenario) {
+            if (scenario === 'offplan-luxury') {
+                document.getElementById('propPrice').value = 4000000;
+                document.getElementById('propPrice_num').value = 4000000;
+                document.getElementById('downPaymentPct').value = 10;
+                document.getElementById('maintDepositPct').value = 8;
+                document.getElementById('maintPaymentTiming').value = 'at_handover';
+                document.getElementById('purchaseCostsPct').value = 2.5;
+                document.getElementById('furnishCost').value = 150000;
+                document.getElementById('loanTenure').value = 8;
+                document.getElementById('annualBullet').value = 100000;
+                document.getElementById('annualBulletYears').value = 4;
+                document.getElementById('monthlyRent').value = 32000;
+                document.getElementById('monthlyRent_num').value = 32000;
+                document.getElementById('annualRentEscalation').value = 6;
+                document.getElementById('vacancyRate').value = 8;
+                document.getElementById('opexRate').value = 10;
+                document.getElementById('capitalAppreciation').value = 7;
+                setFinancingType('developer');
+                setPropertyStatus('offplan');
+                document.getElementById('handoverYears').value = 3;
+            } else if (scenario === 'ready-cash') {
+                document.getElementById('propPrice').value = 2200000;
+                document.getElementById('propPrice_num').value = 2200000;
+                document.getElementById('downPaymentPct').value = 100;
+                document.getElementById('maintDepositPct').value = 5;
+                document.getElementById('maintPaymentTiming').value = 'at_handover';
+                document.getElementById('purchaseCostsPct').value = 2.5;
+                document.getElementById('furnishCost').value = 80000;
+                document.getElementById('loanTenure').value = 1;
+                document.getElementById('annualBullet').value = 0;
+                document.getElementById('annualBulletYears').value = 1;
+                document.getElementById('monthlyRent').value = 19000;
+                document.getElementById('monthlyRent_num').value = 19000;
+                document.getElementById('annualRentEscalation').value = 5;
+                document.getElementById('vacancyRate').value = 5;
+                document.getElementById('opexRate').value = 8;
+                document.getElementById('capitalAppreciation').value = 5;
+                setFinancingType('developer');
+                setPropertyStatus('ready');
+            } else if (scenario === 'ready-mortgage') {
+                document.getElementById('propPrice').value = 6000000;
+                document.getElementById('propPrice_num').value = 6000000;
+                document.getElementById('downPaymentPct').value = 25;
+                document.getElementById('maintDepositPct').value = 7;
+                document.getElementById('maintPaymentTiming').value = 'at_handover';
+                document.getElementById('purchaseCostsPct').value = 3;
+                document.getElementById('furnishCost').value = 250000;
+                document.getElementById('loanTenure').value = 12;
+                document.getElementById('interestRate').value = 7.5;
+                document.getElementById('annualBullet').value = 0;
+                document.getElementById('annualBulletYears').value = 1;
+                document.getElementById('monthlyRent').value = 55000;
+                document.getElementById('monthlyRent_num').value = 55000;
+                document.getElementById('annualRentEscalation').value = 5;
+                document.getElementById('vacancyRate').value = 10;
+                document.getElementById('opexRate').value = 12;
+                document.getElementById('capitalAppreciation').value = 6;
+                setFinancingType('bank');
+                setPropertyStatus('ready');
+            }
+            calculateAll();
+        }
+
+        // Global simulation results cache for exports
+        let globalSimData = {
+            summary: {},
+            tenYearSchedule: []
+        };
+
+        // Main Calculation Engine
+        function calculateAll() {
+            // 1. Gather Inputs
+            const propPrice = parseFloat(document.getElementById('propPrice').value) || 0;
+            const downPaymentPct = parseFloat(document.getElementById('downPaymentPct').value) || 0;
+            const maintDepositPct = parseFloat(document.getElementById('maintDepositPct').value) || 0;
+            const maintPaymentTiming = document.getElementById('maintPaymentTiming').value;
+            const purchaseCostsPct = parseFloat(document.getElementById('purchaseCostsPct').value) || 0;
+            const furnishCost = parseFloat(document.getElementById('furnishCost').value) || 0;
+            const loanTenure = parseInt(document.getElementById('loanTenure').value) || 1;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const annualBullet = parseFloat(document.getElementById('annualBullet').value) || 0;
+            const annualBulletYears = parseInt(document.getElementById('annualBulletYears').value) || 0;
+            const handoverYears = propertyStatus === 'offplan' ? (parseInt(document.getElementById('handoverYears').value) || 1) : 0;
+            const monthlyRent = parseFloat(document.getElementById('monthlyRent').value) || 0;
+            const annualRentEscalation = parseFloat(document.getElementById('annualRentEscalation').value) || 0;
+            const vacancyRate = parseFloat(document.getElementById('vacancyRate').value) || 0;
+            const opexRate = parseFloat(document.getElementById('opexRate').value) || 0;
+            const capitalAppreciation = parseFloat(document.getElementById('capitalAppreciation').value) || 0;
+
+            // 2. Display Dynamic Input Labels
+            document.getElementById('display-propPrice').innerText = formatMoney(propPrice);
+            const downPaymentVal = propPrice * (downPaymentPct / 100);
+            document.getElementById('display-downPaymentPct').innerHTML = `${downPaymentPct}% (<span id="calc-down-val">${formatMoney(downPaymentVal)}</span>)`;
+            
+            const maintDepositVal = propPrice * (maintDepositPct / 100);
+            document.getElementById('display-maintDepositPct').innerHTML = `${maintDepositPct}% (<span id="calc-maint-val">${formatMoney(maintDepositVal)}</span>)`;
+            document.getElementById('display-purchaseCostsPct').innerText = `${purchaseCostsPct}% (${formatMoney(propPrice * purchaseCostsPct / 100)})`;
+            document.getElementById('display-furnishCost').innerText = formatMoney(furnishCost);
+            document.getElementById('display-loanTenure').innerText = `${loanTenure} ${currentLang === 'ar' ? 'سنوات' : 'Years'}`;
+            document.getElementById('display-interestRate').innerText = `${interestRate}%`;
+            document.getElementById('display-annualBullet').innerText = `${formatMoney(annualBullet)} / ${currentLang === 'ar' ? 'سنوياً' : 'yr'}`;
+            document.getElementById('display-annualBulletYears').innerText = `${annualBulletYears} ${currentLang === 'ar' ? 'سنوات' : 'Years'}`;
+            document.getElementById('display-handoverYears').innerText = currentLang === 'ar' ? `بعد ${handoverYears} سنوات (سنة ${handoverYears})` : `In ${handoverYears} Years (Year ${handoverYears})`;
+            document.getElementById('display-monthlyRent').innerText = formatMoney(monthlyRent);
+            document.getElementById('display-annualRentEscalation').innerText = `${annualRentEscalation}% ${currentLang === 'ar' ? 'سنوياً' : 'p.a.'}`;
+            document.getElementById('display-vacancyRate').innerText = `${vacancyRate}%`;
+            document.getElementById('display-opexRate').innerText = `${opexRate}%`;
+            document.getElementById('display-capitalAppreciation').innerText = `${capitalAppreciation}%`;
+
+            // Update Handover & Maint Banner
+            document.getElementById('bannerMaintVal').innerText = formatMoney(maintDepositVal);
+            const t = i18n[currentLang];
+            let timingText = t.optAtHandover;
+            if (maintPaymentTiming === 'year_before') timingText = t.optYearBefore;
+            if (maintPaymentTiming === 'split') timingText = t.optSplit;
+            document.getElementById('bannerMaintTiming').innerText = timingText;
+            document.getElementById('bannerHandoverYearBadge').innerText = propertyStatus === 'offplan' 
+                ? (currentLang === 'ar' ? `سنة الاستلام: ${handoverYears}` : `Handover Year: ${handoverYears}`)
+                : (currentLang === 'ar' ? 'العقار جاهز ومستلم' : 'Ready Property');
+
+            // 3. Initial Capital Calculations (Net Equity Invested)
+            // Down Payment + Purchase Costs + Furnishing + Maintenance Deposit
+            const purchaseCostsVal = propPrice * (purchaseCostsPct / 100);
+            const initialNetEquityInvested = downPaymentVal + purchaseCostsVal + furnishCost + maintDepositVal;
+            
+            document.getElementById('val-net-equity-invested').innerText = formatMoney(initialNetEquityInvested);
+            document.getElementById('val-maint-in-equity').innerText = `${t.thMaint}: ${formatMoney(maintDepositVal)}`;
+
+            // 4. Debt & Installment Calculations
+            const principalFinanced = Math.max(0, propPrice - downPaymentVal);
+            const totalBulletsCommitted = annualBullet * annualBulletYears;
+            const remainingPrincipalToInstall = Math.max(0, principalFinanced - totalBulletsCommitted);
+
+            let baseAnnualInstallment = 0;
+            if (financingType === 'developer') {
+                // 0% Developer installments: Remaining principal divided by tenure
+                baseAnnualInstallment = loanTenure > 0 ? (remainingPrincipalToInstall / loanTenure) : 0;
+            } else {
+                // Bank Mortgage Amortization
+                if (interestRate > 0 && loanTenure > 0) {
+                    const r = (interestRate / 100) / 12;
+                    const n = loanTenure * 12;
+                    const monthlyPayment = principalFinanced * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+                    baseAnnualInstallment = monthlyPayment * 12;
+                } else {
+                    baseAnnualInstallment = loanTenure > 0 ? (principalFinanced / loanTenure) : 0;
+                }
+            }
+
+            // 5. 10-Year Simulation Engine
+            let scheduleData = [];
+            let cumulativeCashFlow = 0;
+            let currentRemainingDebt = principalFinanced;
+            let currentPropertyValue = propPrice;
+            let paybackMilestoneYear = null;
+            let totalCashFlow10Y = 0;
+
+            // Tracking for Year 1 Rented Metrics
+            let firstYearRentedNCF = 0;
+            let firstYearRentedGrossRent = 0;
+            let firstYearRentedEquityPaid = 0;
+            let firstYearRentedNOI = 0;
+            let firstYearRentedPropertyVal = propPrice;
+            let firstYearCoC = 0;
+            let year5CoC = 0;
+            let year10CoC = 0;
+
+            for (let year = 1; year <= 10; year++) {
+                // Determine Property State for this Year
+                const isUnderConstruction = (propertyStatus === 'offplan' && year < handoverYears);
+                const isHandoverYear = (propertyStatus === 'offplan' && year === handoverYears);
+                const isRented = !isUnderConstruction;
+                
+                // Rent Calculation with Compounding Escalation
+                let grossAnnualRent = 0;
+                if (isRented) {
+                    const rentedYearsElapsed = propertyStatus === 'offplan' ? (year - handoverYears) : (year - 1);
+                    const escalatedMonthlyRent = monthlyRent * Math.pow(1 + (annualRentEscalation / 100), Math.max(0, rentedYearsElapsed));
+                    grossAnnualRent = escalatedMonthlyRent * 12;
+                }
+
+                // OpEx and Vacancy
+                const vacancyCost = grossAnnualRent * (vacancyRate / 100);
+                const effectiveGrossIncome = grossAnnualRent - vacancyCost;
+                const opexCost = effectiveGrossIncome * (opexRate / 100);
+                const netOperatingIncome = isRented ? (effectiveGrossIncome - opexCost) : 0;
+
+                // Debt Service & Bullets for this year
+                let currentYearInstallment = (year <= loanTenure && currentRemainingDebt > 0) ? baseAnnualInstallment : 0;
+                let currentYearBullet = (year <= annualBulletYears && currentRemainingDebt > 0) ? annualBullet : 0;
+                
+                // Prevent overpaying remaining debt
+                if (financingType === 'developer') {
+                    if (currentYearInstallment + currentYearBullet > currentRemainingDebt) {
+                        const totalReq = currentRemainingDebt;
+                        currentYearBullet = Math.min(currentYearBullet, totalReq);
+                        currentYearInstallment = Math.max(0, totalReq - currentYearBullet);
+                    }
+                }
+
+                // Maintenance Deposit Deduction for this Year (CRITICAL)
+                let currentYearMaintDeposit = 0;
+                if (propertyStatus === 'offplan') {
+                    if (maintPaymentTiming === 'at_handover' && year === handoverYears) {
+                        currentYearMaintDeposit = maintDepositVal;
+                    } else if (maintPaymentTiming === 'year_before' && year === Math.max(1, handoverYears - 1)) {
+                        currentYearMaintDeposit = maintDepositVal;
+                    } else if (maintPaymentTiming === 'split') {
+                        if (year === Math.max(1, handoverYears - 1)) currentYearMaintDeposit += (maintDepositVal / 2);
+                        if (year === handoverYears) currentYearMaintDeposit += (maintDepositVal / 2);
+                    }
+                } else {
+                    // Ready property: paid at year 1 upon purchase/handover
+                    if (year === 1) currentYearMaintDeposit = maintDepositVal;
+                }
+
+                // Net Cash Flow for the year
+                // NCF = NOI - Installment - Annual Bullet - Maintenance Deposit Paid
+                const annualNetCashFlow = netOperatingIncome - currentYearInstallment - currentYearBullet - currentYearMaintDeposit;
+                cumulativeCashFlow += annualNetCashFlow;
+                totalCashFlow10Y += annualNetCashFlow;
+
+                // Debt Paydown & Principal Reduction
+                let principalPaidThisYear = 0;
+                if (financingType === 'developer') {
+                    // 100% of installment and bullet goes directly to debt reduction
+                    principalPaidThisYear = currentYearInstallment + currentYearBullet;
+                    currentRemainingDebt = Math.max(0, currentRemainingDebt - principalPaidThisYear);
+                } else {
+                    // Bank mortgage split interest vs principal
+                    if (currentYearInstallment > 0) {
+                        const interestPortion = currentRemainingDebt * (interestRate / 100);
+                        principalPaidThisYear = Math.max(0, currentYearInstallment - interestPortion) + currentYearBullet;
+                        currentRemainingDebt = Math.max(0, currentRemainingDebt - principalPaidThisYear);
+                    }
+                }
+
+                // Property Appreciation
+                currentPropertyValue = currentPropertyValue * (1 + (capitalAppreciation / 100));
+
+                // Net Equity = Current Property Value - Remaining Debt
+                const netEquity = Math.max(0, currentPropertyValue - currentRemainingDebt);
+
+                // Returns for this year
+                const cocThisYear = initialNetEquityInvested > 0 ? (annualNetCashFlow / initialNetEquityInvested) * 100 : 0;
+                const roeThisYear = netEquity > 0 ? ((annualNetCashFlow + principalPaidThisYear + (currentPropertyValue * (capitalAppreciation / 100))) / netEquity) * 100 : 0;
+
+                // Check Payback Milestone
+                if (paybackMilestoneYear === null && cumulativeCashFlow >= initialNetEquityInvested) {
+                    paybackMilestoneYear = year;
+                }
+
+                // Capture First Year Rented Stats
+                if ((propertyStatus === 'offplan' && year === handoverYears) || (propertyStatus === 'ready' && year === 1)) {
+                    firstYearRentedNCF = annualNetCashFlow;
+                    firstYearRentedGrossRent = grossAnnualRent;
+                    firstYearRentedEquityPaid = principalPaidThisYear;
+                    firstYearRentedNOI = netOperatingIncome;
+                    firstYearRentedPropertyVal = currentPropertyValue;
+                    firstYearCoC = cocThisYear;
+                }
+                if (year === 5) year5CoC = cocThisYear;
+                if (year === 10) year10CoC = cocThisYear;
+
+                // Status Label
+                let statusLabel = t.statusUnderConst;
+                if (isRented) {
+                    statusLabel = currentRemainingDebt <= 0 ? t.statusDebtFree : t.statusRented;
+                }
+
+                scheduleData.push({
+                    year,
+                    status: statusLabel,
+                    grossAnnualRent,
+                    currentYearInstallment,
+                    currentYearBullet,
+                    currentYearMaintDeposit,
+                    opexCost,
+                    annualNetCashFlow,
+                    cumulativeCashFlow,
+                    currentRemainingDebt,
+                    netEquity,
+                    cocThisYear,
+                    roeThisYear,
+                    isPaybackYear: (year === paybackMilestoneYear)
+                });
+            }
+
+            // Save in global state for exports
+            globalSimData.tenYearSchedule = scheduleData;
+
+            // 6. Update KPI Cards
+            document.getElementById('val-net-cashflow').innerText = formatMoney(firstYearRentedNCF);
+            document.getElementById('val-net-cashflow-mo').innerText = formatMoney(firstYearRentedNCF / 12);
+            document.getElementById('val-coc-return').innerText = `${firstYearCoC.toFixed(2)}%`;
+            document.getElementById('val-coc-year5').innerText = `${year5CoC.toFixed(2)}%`;
+            document.getElementById('val-coc-year10-note').innerText = `${t.lblCocYear10}: ${year10CoC.toFixed(2)}%`;
+            document.getElementById('disp-coc-y1').innerText = `${firstYearCoC.toFixed(2)}%`;
+            document.getElementById('disp-coc-y5').innerText = `${year5CoC.toFixed(2)}%`;
+            document.getElementById('disp-coc-y10').innerText = `${year10CoC.toFixed(2)}%`;
+
+            // Equity Paid Card
+            document.getElementById('val-equity-paid').innerText = formatMoney(firstYearRentedEquityPaid);
+            document.getElementById('val-bullet-contribution').innerText = `${t.lblAnnualBullet}: ${formatMoney(annualBullet)}`;
+
+            // ROE & ROA (Cap Rate)
+            const firstYearNetEquity = propPrice; // Base reference
+            const totalFirstYearGain = firstYearRentedNCF + firstYearRentedEquityPaid + (firstYearRentedPropertyVal * (capitalAppreciation / 100));
+            const calculatedROE = firstYearNetEquity > 0 ? (totalFirstYearGain / firstYearNetEquity) * 100 : 0;
+            document.getElementById('val-roe-return').innerText = `${calculatedROE.toFixed(2)}%`;
+
+            const calculatedROA = firstYearRentedPropertyVal > 0 ? (firstYearRentedNOI / firstYearRentedPropertyVal) * 100 : 0;
+            document.getElementById('val-roa-return').innerText = `${calculatedROA.toFixed(2)}%`;
+
+            // Total Comprehensive ROI (Cash + Paydown + Appreciation on Net Equity Invested)
+            const calculatedTotalROI = initialNetEquityInvested > 0 ? (totalFirstYearGain / initialNetEquityInvested) * 100 : 0;
+            document.getElementById('val-total-roi').innerText = `${calculatedTotalROI.toFixed(2)}%`;
+
+            // Payback Period Card
+            if (paybackMilestoneYear) {
+                document.getElementById('val-payback-years').innerText = `${paybackMilestoneYear} ${currentLang === 'ar' ? 'سنوات' : 'Years'}`;
+            } else {
+                document.getElementById('val-payback-years').innerText = `> 10 ${currentLang === 'ar' ? 'سنوات' : 'Years'}`;
+            }
+
+            // 7. Break-Even Analysis Calculations
+            // Break-Even Occupancy Ratio (BER %) = (OpEx + Debt Service) / Gross Potential Income
+            const totalAnnualDebtService = baseAnnualInstallment + (annualBulletYears > 0 ? annualBullet : 0);
+            const standardGrossRent = monthlyRent * 12;
+            const standardOpEx = standardGrossRent * (1 - (vacancyRate / 100)) * (opexRate / 100);
+            
+            let berRatio = standardGrossRent > 0 ? ((standardOpEx + totalAnnualDebtService) / standardGrossRent) * 100 : 0;
+            berRatio = Math.min(100, Math.max(0, berRatio));
+            const expectedOccupancy = 100 - vacancyRate;
+            const safetyMargin = Math.max(0, expectedOccupancy - berRatio);
+
+            document.getElementById('val-ber-ratio').innerText = `${berRatio.toFixed(1)}%`;
+            document.getElementById('val-safety-margin').innerText = `${safetyMargin.toFixed(1)}%`;
+
+            // Gauge Bar widths
+            document.getElementById('bar-ber-segment').style.width = `${berRatio}%`;
+            document.getElementById('bar-safety-segment').style.width = `${safetyMargin}%`;
+            document.getElementById('bar-vacancy-segment').style.width = `${vacancyRate}%`;
+
+            // Minimum Monthly Break-Even Rent
+            // Floor Rent = (Debt Service) / [ (1 - Vacancy%) * (1 - OpEx%) ] / 12
+            const effectiveMultiplier = (1 - (vacancyRate / 100)) * (1 - (opexRate / 100));
+            const minBreakEvenAnnualRent = effectiveMultiplier > 0 ? (totalAnnualDebtService / effectiveMultiplier) : totalAnnualDebtService;
+            const minBreakEvenMonthlyRent = minBreakEvenAnnualRent / 12;
+            document.getElementById('val-min-break-rent').innerText = formatMoney(minBreakEvenMonthlyRent);
+
+            // Rent Drop Cushion
+            const rentDropCushion = monthlyRent > 0 ? Math.max(0, ((monthlyRent - minBreakEvenMonthlyRent) / monthlyRent) * 100) : 0;
+            document.getElementById('val-rent-drop-cushion').innerText = `${rentDropCushion.toFixed(1)}%`;
+
+            // 10-Year Cumulative Cash Recovery %
+            const capitalRecoveredPct = initialNetEquityInvested > 0 ? Math.min(300, (totalCashFlow10Y / initialNetEquityInvested) * 100) : 0;
+            document.getElementById('val-capital-recovered-pct').innerText = `${capitalRecoveredPct.toFixed(1)}%`;
+
+            // Total Wealth Multiplier
+            const endNetEquity = scheduleData[9].netEquity;
+            const totalWealthGenerated = totalCashFlow10Y + endNetEquity;
+            const wealthMultiple = initialNetEquityInvested > 0 ? (totalWealthGenerated / initialNetEquityInvested) : 1;
+            document.getElementById('val-wealth-multiple').innerText = `${wealthMultiple.toFixed(2)}x`;
+
+            // Stress Testing Calculations
+            const stressRentDropNCF = ((monthlyRent * 0.85 * 12) * effectiveMultiplier) - totalAnnualDebtService;
+            document.getElementById('stress-val-rent-drop').innerText = `${formatMoney(stressRentDropNCF / 12)} / ${currentLang === 'ar' ? 'شهر' : 'mo'}`;
+            document.getElementById('stress-val-rent-drop').className = `font-bold ${stressRentDropNCF >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            const stressVacancyNCF = ((standardGrossRent * 0.80) * (1 - (opexRate / 100))) - totalAnnualDebtService;
+            document.getElementById('stress-val-vacancy-shock').innerText = `${formatMoney(stressVacancyNCF / 12)} / ${currentLang === 'ar' ? 'شهر' : 'mo'}`;
+            document.getElementById('stress-val-vacancy-shock').className = `font-bold ${stressVacancyNCF >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            const stressOpExSurgeNCF = (effectiveGrossIncome * (1 - (opexRate * 1.25 / 100))) - totalAnnualDebtService;
+            document.getElementById('stress-val-opex-surge').innerText = `${formatMoney(stressOpExSurgeNCF / 12)} / ${currentLang === 'ar' ? 'شهر' : 'mo'}`;
+            document.getElementById('stress-val-opex-surge').className = `font-bold ${stressOpExSurgeNCF >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            // Save summary for export
+            globalSimData.summary = {
+                propPrice,
+                downPaymentVal,
+                maintDepositVal,
+                maintPaymentTiming,
+                purchaseCostsVal,
+                furnishCost,
+                initialNetEquityInvested,
+                firstYearRentedNCF,
+                firstYearCoC,
+                year5CoC,
+                year10CoC,
+                firstYearRentedEquityPaid,
+                calculatedROE,
+                calculatedROA,
+                calculatedTotalROI,
+                paybackMilestoneYear,
+                berRatio,
+                minBreakEvenMonthlyRent,
+                wealthMultiple
+            };
+
+            // 8. Render Table & Charts
+            renderScheduleTable(scheduleData);
+            updateCharts(scheduleData);
+        }
+
+        // Render Table Body
+        function renderScheduleTable(data) {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-slate-800/40 transition-colors ${row.isPaybackYear ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500' : ''}`;
+
+                const ncfClass = row.annualNetCashFlow >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
+                const cumClass = row.cumulativeCashFlow >= 0 ? 'text-emerald-400' : 'text-slate-400';
+
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-bold text-white flex items-center gap-1.5">
+                        ${row.year}
+                        ${row.isPaybackYear ? `<span class="text-[9px] bg-emerald-500 text-slate-950 px-1 rounded font-black">${currentLang === 'ar' ? 'التعادل' : 'Payback'}</span>` : ''}
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full ${row.status.includes('إنشاء') || row.status.includes('Construction') ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-brand-500/10 text-brand-300 border border-brand-500/20'}">
+                            ${row.status}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-slate-200">${formatMoney(row.grossAnnualRent)}</td>
+                    <td class="py-2.5 px-3 text-rose-300">${formatMoney(row.currentYearInstallment)}</td>
+                    <td class="py-2.5 px-3 text-gold-400">${row.currentYearBullet > 0 ? formatMoney(row.currentYearBullet) : '-'}</td>
+                    <td class="py-2.5 px-3 text-amber-400 font-semibold">${row.currentYearMaintDeposit > 0 ? formatMoney(row.currentYearMaintDeposit) : '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-400">${formatMoney(row.opexCost)}</td>
+                    <td class="py-2.5 px-3 ${ncfClass}">${formatMoney(row.annualNetCashFlow)}</td>
+                    <td class="py-2.5 px-3 ${cumClass}">${formatMoney(row.cumulativeCashFlow)}</td>
+                    <td class="py-2.5 px-3 text-slate-400">${formatMoney(row.currentRemainingDebt)}</td>
+                    <td class="py-2.5 px-3 font-bold text-blue-400">${formatMoney(row.netEquity)}</td>
+                    <td class="py-2.5 px-3 text-purple-400">${row.cocThisYear.toFixed(1)}%</td>
+                    <td class="py-2.5 px-3 text-rose-400">${row.roeThisYear.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render Charts with Chart.js
+        function updateCharts(data) {
+            const labels = data.map(d => `${currentLang === 'ar' ? 'سنة' : 'Yr'} ${d.year}`);
+            const rentData = data.map(d => d.grossAnnualRent);
+            const debtServiceData = data.map(d => d.currentYearInstallment + d.currentYearBullet + d.currentYearMaintDeposit);
+            const ncfData = data.map(d => d.annualNetCashFlow);
+
+            const equityData = data.map(d => d.netEquity);
+            const remainingDebtData = data.map(d => d.currentRemainingDebt);
+
+            // Chart 1: Cash Flow & Obligations
+            const ctx1 = document.getElementById('cashflowChart').getContext('2d');
+            if (cashflowChartInstance) cashflowChartInstance.destroy();
+            cashflowChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: currentLang === 'ar' ? 'الإيجار السنوي' : 'Gross Rent',
+                            data: rentData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.4)',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: currentLang === 'ar' ? 'الأقساط والوديعة' : 'Debt & Deposit',
+                            data: debtServiceData,
+                            backgroundColor: 'rgba(239, 68, 68, 0.4)',
+                            borderColor: '#ef4444',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            type: 'line',
+                            label: currentLang === 'ar' ? 'صافي التدفق (NCF)' : 'Net Cash Flow',
+                            data: ncfData,
+                            borderColor: '#38bdf8',
+                            backgroundColor: '#38bdf8',
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Cairo', size: 10 } } }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { family: 'Cairo', size: 9 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { family: 'Cairo', size: 9 } } }
+                    }
+                }
+            });
+
+            // Chart 2: Wealth & Net Equity
+            const ctx2 = document.getElementById('wealthChart').getContext('2d');
+            if (wealthChartInstance) wealthChartInstance.destroy();
+            wealthChartInstance = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: currentLang === 'ar' ? 'صافي حقوق الملكية (Net Equity)' : 'Net Equity',
+                            data: equityData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: currentLang === 'ar' ? 'رصيد الدين المتبقي' : 'Remaining Debt',
+                            data: remainingDebtData,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#94a3b8', font: { family: 'Cairo', size: 10 } } }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { family: 'Cairo', size: 9 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { family: 'Cairo', size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        // Direct Native PDF Generation (html2pdf.js) - Completely Solves iframe / sandbox print blocking!
+        function generateDirectPDF() {
+            const t = i18n[currentLang];
+            const s = globalSimData.summary;
+            const isAr = currentLang === 'ar';
+
+            // Build High-Quality Executive Report Template
+            const reportEl = document.createElement('div');
+            reportEl.dir = isAr ? 'rtl' : 'ltr';
+            reportEl.style.fontFamily = 'Cairo, sans-serif';
+            reportEl.style.color = '#0f172a';
+            reportEl.style.background = '#ffffff';
+            reportEl.style.padding = '24px';
+            reportEl.style.width = '100%';
+            reportEl.style.boxSizing = 'border-box';
+
+            let scheduleRowsHtml = '';
+            globalSimData.tenYearSchedule.forEach(row => {
+                scheduleRowsHtml += `
+                    <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: ${isAr ? 'right' : 'left'};">
+                        <td style="padding: 6px; font-weight: bold;">${row.year} ${row.isPaybackYear ? '★' : ''}</td>
+                        <td style="padding: 6px;">${row.status}</td>
+                        <td style="padding: 6px;">${Math.round(row.grossAnnualRent).toLocaleString()}</td>
+                        <td style="padding: 6px; color: #dc2626;">${Math.round(row.currentYearInstallment).toLocaleString()}</td>
+                        <td style="padding: 6px; color: #d97706;">${row.currentYearBullet > 0 ? Math.round(row.currentYearBullet).toLocaleString() : '-'}</td>
+                        <td style="padding: 6px; color: #b45309; font-weight: bold;">${row.currentYearMaintDeposit > 0 ? Math.round(row.currentYearMaintDeposit).toLocaleString() : '-'}</td>
+                        <td style="padding: 6px; font-weight: bold; color: ${row.annualNetCashFlow >= 0 ? '#16a34a' : '#dc2626'};">${Math.round(row.annualNetCashFlow).toLocaleString()}</td>
+                        <td style="padding: 6px;">${Math.round(row.cumulativeCashFlow).toLocaleString()}</td>
+                        <td style="padding: 6px; color: #2563eb; font-weight: bold;">${Math.round(row.netEquity).toLocaleString()}</td>
+                        <td style="padding: 6px; color: #7c3aed;">${row.cocThisYear.toFixed(1)}%</td>
+                    </tr>
+                `;
+            });
+
+            reportEl.innerHTML = `
+                <div style="border-bottom: 3px solid #10b981; padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="font-size: 20px; font-weight: 800; color: #047857; margin: 0;">${isAr ? 'تقرير الجدوى الاستثمارية العقارية' : 'Real Estate Investment Feasibility Report'}</h1>
+                        <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">${isAr ? 'شامل العقارات تحت الإنشاء، وديعة الصيانة، تحليل التعادل، واسترداد رأس المال' : 'Including Off-Plan, Maintenance Deposit, Break-Even & Capital Recovery'}</p>
+                    </div>
+                    <div style="text-align: ${isAr ? 'left' : 'right'}; font-size: 11px; color: #475569;">
+                        <div><strong>${isAr ? 'التاريخ:' : 'Date:'}</strong> ${new Date().toLocaleDateString()}</div>
+                        <div><strong>${isAr ? 'العملة:' : 'Currency:'}</strong> ${currentCurrency}</div>
+                    </div>
+                </div>
+
+                <!-- 8 Core Metrics Grid -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                        <div style="font-size: 10px; color: #64748b;">${t.cardEquityInvested}</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #1e293b; margin-top: 2px;">${formatMoney(s.initialNetEquityInvested)}</div>
+                        <div style="font-size: 9px; color: #b45309;">${t.thMaint}: ${formatMoney(s.maintDepositVal)}</div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                        <div style="font-size: 10px; color: #64748b;">${t.cardNetCashflow}</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #16a34a; margin-top: 2px;">${formatMoney(s.firstYearRentedNCF)}</div>
+                        <div style="font-size: 9px; color: #64748b;">${formatMoney(s.firstYearRentedNCF/12)} / ${isAr ? 'شهرياً' : 'mo'}</div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                        <div style="font-size: 10px; color: #64748b;">${t.cardCoc}</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #7c3aed; margin-top: 2px;">${s.firstYearCoC.toFixed(2)}%</div>
+                        <div style="font-size: 9px; color: #7c3aed;">${isAr ? 'سنة 5:' : 'Yr 5:'} ${s.year5CoC.toFixed(1)}% | ${isAr ? 'سنة 10:' : 'Yr 10:'} ${s.year10CoC.toFixed(1)}%</div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                        <div style="font-size: 10px; color: #64748b;">${t.cardPayback}</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #d97706; margin-top: 2px;">${s.paybackMilestoneYear ? s.paybackMilestoneYear + (isAr ? ' سنوات' : ' Yrs') : '> 10 Yrs'}</div>
+                        <div style="font-size: 9px; color: #64748b;">${t.lblTotalWealthRec}: ${s.wealthMultiple.toFixed(2)}x</div>
+                    </div>
+                </div>
+
+                <!-- Break-Even Highlights -->
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; display: flex; justify-content: space-between; font-size: 11px;">
+                    <div><strong>${t.lblGaugeBer}</strong> <span style="color: #dc2626; font-weight: bold;">${s.berRatio.toFixed(1)}%</span></div>
+                    <div><strong>${t.lblMinRent}:</strong> <span style="color: #b45309; font-weight: bold;">${formatMoney(s.minBreakEvenMonthlyRent)}</span></div>
+                    <div><strong>${isAr ? 'وديعة الصيانة المحسوبة:' : 'Maintenance Deposit:'}</strong> <span style="color: #047857; font-weight: bold;">${formatMoney(s.maintDepositVal)} (${s.maintPaymentTiming})</span></div>
+                </div>
+
+                <!-- 10-Year Schedule Table -->
+                <h3 style="font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 8px;">${t.titleTableSchedule}</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+                    <thead>
+                        <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; font-size: 10px; color: #475569; text-align: ${isAr ? 'right' : 'left'};">
+                            <th style="padding: 6px;">${t.thYear}</th>
+                            <th style="padding: 6px;">${t.thStatus}</th>
+                            <th style="padding: 6px;">${t.thRent}</th>
+                            <th style="padding: 6px;">${t.thInstallment}</th>
+                            <th style="padding: 6px;">${t.thBullet}</th>
+                            <th style="padding: 6px;">${t.thMaint}</th>
+                            <th style="padding: 6px;">${t.thNcf}</th>
+                            <th style="padding: 6px;">${t.thCumCf}</th>
+                            <th style="padding: 6px;">${t.thEquity}</th>
+                            <th style="padding: 6px;">${t.thCoc}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${scheduleRowsHtml}
+                    </tbody>
+                </table>
+
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between;">
+                    <span>Smart Real Estate Investor Suite PRO • ${new Date().getFullYear()}</span>
+                    <span>${isAr ? 'تم إنشاء التقرير آلياً' : 'Automated Executive Investor Report'}</span>
+                </div>
+            `;
+
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `Real_Estate_Investment_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Trigger Direct Download
+            html2pdf().set(opt).from(reportEl).save();
+        }
+
+        // Native Excel (.xlsx) Generation via SheetJS
+        function exportToExcel() {
+            const isAr = currentLang === 'ar';
+            const t = i18n[currentLang];
+            const s = globalSimData.summary;
+
+            // Sheet 1: Executive KPI Summary
+            const summaryData = [
+                [isAr ? "مؤشرات الاستثمار العقاري" : "Real Estate Investment KPI", isAr ? "القيمة" : "Value", isAr ? "العملة / الوحدة" : "Unit"],
+                [t.lblPropPrice, s.propPrice, currentCurrency],
+                [t.lblDownPayment, s.downPaymentVal, currentCurrency],
+                [t.lblMaintDeposit, s.maintDepositVal, `${currentCurrency} (${s.maintPaymentTiming})`],
+                [t.lblClosingCosts, s.purchaseCostsVal, currentCurrency],
+                [t.lblFurnishCost, s.furnishCost, currentCurrency],
+                [t.cardEquityInvested, s.initialNetEquityInvested, currentCurrency],
+                [t.cardNetCashflow, s.firstYearRentedNCF, `${currentCurrency} / ${isAr ? 'سنوياً' : 'yr'}`],
+                [isAr ? "صافي التدفق الشهري" : "Monthly Net Cash Flow", s.firstYearRentedNCF / 12, `${currentCurrency} / ${isAr ? 'شهرياً' : 'mo'}`],
+                [t.cardCoc, (s.firstYearCoC / 100), "%"],
+                [isAr ? "عائد النقد في السنة 5" : "CoC Year 5", (s.year5CoC / 100), "%"],
+                [isAr ? "عائد النقد في السنة 10" : "CoC Year 10", (s.year10CoC / 100), "%"],
+                [t.cardEquityPaid, s.firstYearRentedEquityPaid, currentCurrency],
+                [t.cardRoe, (s.calculatedROE / 100), "%"],
+                [t.cardRoa, (s.calculatedROA / 100), "%"],
+                [t.cardTotalRoi, (s.calculatedTotalROI / 100), "%"],
+                [t.cardPayback, s.paybackMilestoneYear ? s.paybackMilestoneYear : "> 10", isAr ? "سنوات" : "Years"],
+                [t.lblGaugeBer, (s.berRatio / 100), "%"],
+                [t.lblMinRent, s.minBreakEvenMonthlyRent, `${currentCurrency} / ${isAr ? 'شهرياً' : 'mo'}`],
+                [t.lblTotalWealthRec, s.wealthMultiple, "x"]
+            ];
+
+            // Sheet 2: 10-Year Simulation Schedule
+            const scheduleHeaders = [
+                t.thYear,
+                t.thStatus,
+                `${t.thRent} (${currentCurrency})`,
+                `${t.thInstallment} (${currentCurrency})`,
+                `${t.thBullet} (${currentCurrency})`,
+                `${t.thMaint} (${currentCurrency})`,
+                `${t.thOpex} (${currentCurrency})`,
+                `${t.thNcf} (${currentCurrency})`,
+                `${t.thCumCf} (${currentCurrency})`,
+                `${t.thDebt} (${currentCurrency})`,
+                `${t.thEquity} (${currentCurrency})`,
+                "CoC %",
+                "ROE %"
+            ];
+
+            const scheduleRows = globalSimData.tenYearSchedule.map(r => [
+                r.year,
+                r.status,
+                Math.round(r.grossAnnualRent),
+                Math.round(r.currentYearInstallment),
+                Math.round(r.currentYearBullet),
+                Math.round(r.currentYearMaintDeposit),
+                Math.round(r.opexCost),
+                Math.round(r.annualNetCashFlow),
+                Math.round(r.cumulativeCashFlow),
+                Math.round(r.currentRemainingDebt),
+                Math.round(r.netEquity),
+                `${r.cocThisYear.toFixed(1)}%`,
+                `${r.roeThisYear.toFixed(1)}%`
+            ]);
+
+            const wb = XLSX.utils.book_new();
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+            const wsSchedule = XLSX.utils.aoa_to_sheet([scheduleHeaders, ...scheduleRows]);
+
+            // Set Column Widths
+            wsSummary['!cols'] = [{ wch: 35 }, { wch: 20 }, { wch: 25 }];
+            wsSchedule['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 10 }, { wch: 10 }];
+
+            XLSX.utils.book_append_sheet(wb, wsSummary, isAr ? "الملخص الاستثماري" : "Executive Summary");
+            XLSX.utils.book_append_sheet(wb, wsSchedule, isAr ? "محاكاة 10 سنوات" : "10-Year Schedule");
+
+            XLSX.writeFile(wb, `Real_Estate_Model_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            calculateAll();
+        };
+    </script>
+</body>
+</html>
